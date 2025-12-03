@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisador Emocional de Músicas</title>
+    <style>
+        :root {
+            --vergonha: #8B0000; --culpa: #A52A2A; --apatia: #696969;
+            --tristeza: #4682B4; --medo: #2E8B57; --desejo: #DAA520;
+            --raiva: #DC143C; --orgulho: #FF8C00; --coragem: #32CD32;
+            --neutro: #808080; --vontade: #1E90FF; --aceitacao: #9370DB;
+            --razao: #00CED1; --amor: #FF1493; --alegria: #FFD700;
+            --paz: #FFFFFF; --iluminacao: #00FFFF;
+        }
+        
+        * {
+            margin: 0; padding: 0; box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background: #0a0a1a;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 15px;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a3a, #2a2a5a);
+            border-radius: 20px;
+            border: 2px solid #00ff88;
+        }
+        
+        h1 {
+            font-size: 24px;
+            color: #00ff88;
+            margin-bottom: 10px;
+        }
+        
+        /* BOTÕES PRINCIPAIS */
+        .botoes-principais {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 20px 0;
+        }
+        
+        .btn-grande {
+            padding: 20px;
+            font-size: 18px;
+            border: none;
+            border-radius: 15px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-grande:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-microfone {
+            background: linear-gradient(45deg, #32CD32, #00CED1);
+            color: white;
+        }
+        
+        .btn-upload {
+            background: linear-gradient(45deg, #FF1493, #9370DB);
+            color: white;
+        }
+        
+        /* STATUS */
+        .status {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+            font-size: 16px;
+        }
+        
+        /* EMOÇÃO ATUAL */
+        .emocao-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 3px solid #808080;
+            text-align: center;
+            transition: all 0.5s;
+        }
+        
+        .emocao-nome {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .emocao-nivel {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50px;
+            margin-top: 10px;
+        }
+        
+        /* ESCALA */
+        .escala-container {
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .escala-linha {
+            height: 25px;
+            background: linear-gradient(90deg,
+                var(--vergonha) 0%,
+                var(--culpa) 6%,
+                var(--apatia) 12%,
+                var(--tristeza) 18%,
+                var(--medo) 24%,
+                var(--desejo) 30%,
+                var(--raiva) 36%,
+                var(--orgulho) 42%,
+                var(--coragem) 48%,
+                var(--neutro) 54%,
+                var(--vontade) 60%,
+                var(--aceitacao) 66%,
+                var(--razao) 72%,
+                var(--amor) 78%,
+                var(--alegria) 84%,
+                var(--paz) 90%,
+                var(--iluminacao) 100%
+            );
+            border-radius: 12px;
+            position: relative;
+            margin-top: 10px;
+        }
+        
+        .indicador {
+            position: absolute;
+            top: -20px;
+            width: 30px;
+            height: 30px;
+            background: white;
+            border-radius: 50%;
+            border: 3px solid gold;
+            box-shadow: 0 0 15px gold;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+        
+        /* ANÁLISE EM TEMPO REAL */
+        .analise-tempo-real {
+            background: rgba(0,255,136,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .onda-sonora {
+            height: 100px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin: 15px 0;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .barra-onda {
+            position: absolute;
+            bottom: 0;
+            width: 4px;
+            background: #00ff88;
+            border-radius: 2px;
+        }
+        
+        /* EXEMPLOS */
+        .exemplos-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .exemplo-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .exemplo-btn:active {
+            transform: scale(0.95);
+            border-color: #00ff88;
+        }
+        
+        /* UPLOAD */
+        .upload-area {
+            border: 2px dashed #00ff88;
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .upload-area.active {
+            display: block;
+        }
+        
+        /* RECOMENDAÇÃO */
+        .recomendacao {
+            background: rgba(0,255,136,0.1);
+            border-left: 4px solid #00ff88;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        /* RESPONSIVO */
+        @media (min-width: 768px) {
+            .container {
+                max-width: 600px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- CABEÇALHO -->
+        <div class="header">
+            <h1>🎵 ANALISADOR EMOCIONAL DE MÚSICAS</h1>
+            <p>Escala de Hawkins | Análise em tempo real</p>
+        </div>
+        
+        <!-- BOTÕES PRINCIPAIS -->
+        <div class="botoes-principais">
+            <button class="btn-grande btn-microfone" onclick="iniciarAnaliseMicrofone()">
+                🎤 ANALISAR EM TEMPO REAL
+            </button>
+            <button class="btn-grande btn-upload" onclick="mostrarUpload()">
+                📁 ANALISAR ARQUIVO DE ÁUDIO
+            </button>
+        </div>
+        
+        <!-- STATUS -->
+        <div class="status" id="status">
+            👆 Escolha uma opção acima para começar
+        </div>
+        
+        <!-- ÁREA DE UPLOAD -->
+        <div class="upload-area" id="uploadArea">
+            <h3>📁 ENVIE SEU ARQUIVO DE ÁUDIO</h3>
+            <p>Formatos suportados: MP3, WAV, M4A</p>
+            <input type="file" id="arquivoAudio" accept="audio/*" style="display: none;">
+            <button class="btn-grande" onclick="document.getElementById('arquivoAudio').click()">
+                📂 ESCOLHER ARQUIVO
+            </button>
+            <p style="margin-top: 15px; color: #aaa; font-size: 14px;">
+                ou arraste o arquivo para esta área
+            </p>
+        </div>
+        
+        <!-- ANÁLISE EM TEMPO REAL -->
+        <div class="analise-tempo-real" id="analiseTempoReal">
+            <h3>🎵 ANALISANDO EM TEMPO REAL</h3>
+            <div class="onda-sonora" id="ondaSonora">
+                <!-- Ondas serão geradas por JS -->
+            </div>
+            <button class="btn-grande" onclick="pararAnalise()" style="background: linear-gradient(45deg, #FF4444, #FF8800);">
+                ⏹️ PARAR ANÁLISE
+            </button>
+        </div>
+        
+        <!-- EMOÇÃO DETECTADA -->
+        <div class="emocao-card" id="emocaoCard">
+            <div id="emocaoNome" class="emocao-nome">--</div>
+            <div id="emocaoDesc">Escolha uma música para análise</div>
+            <div id="emocaoNivel" class="emocao-nivel">Nível: --</div>
+        </div>
+        
+        <!-- ESCALA VISUAL -->
+        <div class="escala-container">
+            <h3>📊 ESCALA DE HAWKINS</h3>
+            <div class="escala-linha">
+                <div id="indicador" class="indicador" style="left: 50%;"></div>
+            </div>
+        </div>
+        
+        <!-- EXEMPLOS -->
+        <div>
+            <h3>🎧 EXEMPLOS PRONTOS</h3>
+            <div class="exemplos-grid">
+                <button class="exemplo-btn" onclick="carregarExemplo('amor')">
+                    ❤️ Amor
+                </button>
+                <button class="exemplo-btn" onclick="carregarExemplo('alegria')">
+                    😊 Alegria
+                </button>
+                <button class="exemplo-btn" onclick="carregarExemplo('tristeza')">
+                    😢 Tristeza
+                </button>
+                <button class="exemplo-btn" onclick="carregarExemplo('paz')">
+                    ☮️ Paz
+                </button>
+                <button class="exemplo-btn" onclick="carregarExemplo('coragem')">
+                    💪 Coragem
+                </button>
+                <button class="exemplo-btn" onclick="carregarExemplo('raiva')">
+                    😠 Raiva
+                </button>
+                <button class="exemplo-btn" onclick="carregarExemplo('medo')">
+                    😨 Medo
+                </button>
+                <button class="exemplo-btn" onclick="carregarExemplo('iluminacao')">
+                    ✨ Iluminação
+                </button>
+            </div>
+        </div>
+        
+        <!-- RECOMENDAÇÃO -->
+        <div class="recomendacao" id="recomendacao">
+            <strong>💡 RECOMENDAÇÃO:</strong>
+            <p id="recomendacaoTexto">Escolha uma música para ver recomendações</p>
+        </div>
+        
+        <!-- INFO -->
+        <div style="text-align: center; margin-top: 30px; color: #666; font-size: 14px;">
+            <p>✨ Você atrai o que vibra</p>
+            <p>Analisador Emocional v3.0 | Funcionalidades completas</p>
+        </div>
+    </div>
+
+    <script>
+        // ================= CONFIGURAÇÃO =================
+        const ESCALA_HAWKINS = [
+            { nome: "VERGONHA", nivel: 20, cor: "#8B0000", desc: "Auto-ódio, inferioridade" },
+            { nome: "CULPA", nivel: 30, cor: "#A52A2A", desc: "Arrependimento, auto-punição" },
+            { nome: "APATIA", nivel: 50, cor: "#696969", desc: "Desespero, vitimização" },
+            { nome: "TRISTEZA", nivel: 75, cor: "#4682B4", desc: "Perda, luto, pesar" },
+            { nome: "MEDO", nivel: 100, cor: "#2E8B57", desc: "Ansiedade, preocupação" },
+            { nome: "DESEJO", nivel: 125, cor: "#DAA520", desc: "Cobiça, vício, anseio" },
+            { nome: "RAIVA", nivel: 150, cor: "#DC143C", desc: "Ódio, ressentimento, fúria" },
+            { nome: "ORGULHO", nivel: 175, cor: "#FF8C00", desc: "Superioridade, arrogância" },
+            { nome: "CORAGEM", nivel: 200, cor: "#32CD32", desc: "Confiança, otimismo" },
+            { nome: "NEUTRO", nivel: 250, cor: "#808080", desc: "Aceitação, relaxamento" },
+            { nome: "VONTADE", nivel: 310, cor: "#1E90FF", desc: "Esperança, intenção positiva" },
+            { nome: "ACEITAÇÃO", nivel: 350, cor: "#9370DB", desc: "Perdão, compaixão" },
+            { nome: "RAZÃO", nivel: 400, cor: "#00CED1", desc: "Clareza, compreensão" },
+            { nome: "AMOR", nivel: 500, cor: "#FF1493", desc: "Apreço, bondade incondicional" },
+            { nome: "ALEGRIA", nivel: 540, cor: "#FFD700", desc: "Felicidade, êxtase" },
+            { nome: "PAZ", nivel: 600, cor: "#FFFFFF", desc: "Serenidade, iluminação" },
+            { nome: "ILUMINAÇÃO", nivel: 750, cor: "#00FFFF", desc: "Unidade, consciência pura" }
+        ];
+
+        // ================= EXEMPLOS PRONTOS =================
+        const EXEMPLOS = {
+            'amor': {
+                nome: "Can't Help Falling In Love",
+                artista: "Elvis Presley",
+                emocao: "AMOR",
+                nivel: 500,
+                recomendacao: "Perfeita para abrir o coração. Ouça enquanto visualiza amor entrando em sua vida."
+            },
+            'alegria': {
+                nome: "Happy",
+                artista: "Pharrell Williams",
+                emocao: "ALEGRIA",
+                nivel: 540,
+                recomendacao: "Eleva instantaneamente a vibração. Dance e sinta a alegria se espalhar."
+            },
+            'tristeza': {
+                nome: "Hurt",
+                artista: "Johnny Cash",
+                emocao: "TRISTEZA",
+                nivel: 75,
+                recomendacao: "Catártica para liberar emoções. Após ouvir, mude para uma música alegre."
+            },
+            'paz': {
+                nome: "Weightless",
+                artista: "Marconi Union",
+                emocao: "PAZ",
+                nivel: 600,
+                recomendacao: "Reduz ansiedade cientificamente. Ideal para meditação e relaxamento profundo."
+            },
+            'coragem': {
+                nome: "Eye of the Tiger",
+                artista: "Survivor",
+                emocao: "CORAGEM",
+                nivel: 200,
+                recomendacao: "Para momentos que exigem ação. Ouça antes de desafios importantes."
+            },
+            'raiva': {
+                nome: "Killing In The Name",
+                artista: "Rage Against The Machine",
+                emocao: "RAIVA",
+                nivel: 150,
+                recomendacao: "Libera raiva contida de forma segura. Transforme a energia em ação positiva."
+            },
+            'medo': {
+                nome: "Thriller",
+                artista: "Michael Jackson",
+                emocao: "MEDO",
+                nivel: 100,
+                recomendacao: "Entretenimento excitante. Não ouça quando estiver ansioso ou vulnerável."
+            },
+            'iluminacao': {
+                nome: "Om Namah Shivaya",
+                artista: "Deva Premal",
+                emocao: "ILUMINAÇÃO",
+                nivel: 750,
+                recomendacao: "Para práticas espirituais profundas. Ouça durante meditação ou yoga."
+            }
+        };
+
+        // ================= VARIÁVEIS =================
+        let audioContext = null;
+        let analisador = null;
+        let microfone = null;
+        let analisando = false;
+        let intervaloAnalise = null;
+        let ondaElement = null;
+
+        // ================= FUNÇÕES PRINCIPAIS =================
+        function iniciarAnaliseMicrofone() {
+            if (!navigator.mediaDevices) {
+                atualizarStatus("❌ Seu navegador não suporta análise de áudio");
+                return;
+            }
+            
+            atualizarStatus("🎤 Pedindo permissão para acessar microfone...");
+            
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    analisador = audioContext.createAnalyser();
+                    microfone = audioContext.createMediaStreamSource(stream);
+                    
+                    microfone.connect(analisador);
+                    analisador.fftSize = 2048;
+                    
+                    analisando = true;
+                    document.getElementById('analiseTempoReal').style.display = 'block';
+                    document.getElementById('uploadArea').style.display = 'none';
+                    
+                    atualizarStatus("✅ Analisando áudio em tempo real... Fale ou toque música");
+                    
+                    // Criar visualização de onda
+                    criarOndaSonora();
+                    
+                    // Iniciar análise contínua
+                    iniciarLoopAnalise();
+                })
+                .catch(err => {
+                    atualizarStatus("❌ Erro: " + err.message);
+                    console.error("Erro ao acessar microfone:", err);
+                });
+        }
+
+        function pararAnalise() {
+            if (analisando) {
+                analisando = false;
+                
+                if (intervaloAnalise) {
+                    clearInterval(intervaloAnalise);
+                }
+                
+                if (microfone && microfone.mediaStream) {
+                    microfone.mediaStream.getTracks().forEach(track => track.stop());
+                }
+                
+                if (audioContext) {
+                    audioContext.close();
+                }
+                
+                document.getElementById('analiseTempoReal').style.display = 'none';
+                atualizarStatus("⏹️ Análise parada. Clique para iniciar novamente");
+            }
+        }
+
+        function mostrarUpload() {
+            document.getElementById('uploadArea').style.display = 'block';
+            document.getElementById('analiseTempoReal').style.display = 'none';
+            atualizarStatus("📁 Escolha um arquivo de áudio para análise");
+            
+            // Configurar input de arquivo
+            const input = document.getElementById('arquivoAudio');
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    analisarArquivo(file);
+                }
+            };
+            
+            // Configurar drag & drop
+            const uploadArea = document.getElementById('uploadArea');
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#00ff88';
+                this.style.background = 'rgba(0,255,136,0.1)';
+            });
+            
+            uploadArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#00ff88';
+                this.style.background = 'transparent';
+            });
+            
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#00ff88';
+                this.style.background = 'transparent';
+                
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('audio/')) {
+                    analisarArquivo(file);
+                } else {
+                    atualizarStatus("❌ Por favor, selecione um arquivo de áudio válido");
+                }
+            });
+        }
+
+        function analisarArquivo(file) {
+            atualizarStatus("🔍 Analisando arquivo: " + file.name);
+            
+            // Simulação de análise (em produção, aqui analisaria o arquivo real)
+            setTimeout(() => {
+                // Escolher uma emoção aleatória para demonstração
+                const emocaoAleatoria = ESCALA_HAWKINS[Math.floor(Math.random() * ESCALA_HAWKINS.length)];
+                mostrarResultado(emocaoAleatoria, file.name, "Arquivo Local");
+            }, 1500);
+        }
+
+        function carregarExemplo(tipo) {
+            const exemplo = EXEMPLOS[tipo];
+            if (!exemplo) return;
+            
+            const emocaoData = ESCALA_HAWKINS.find(e => e.nome === exemplo.emocao);
+            mostrarResultado(emocaoData, exemplo.nome, exemplo.artista);
+            document.getElementById('recomendacaoTexto').textContent = exemplo.recomendacao;
+            
+            atualizarStatus("✅ Exemplo carregado: " + exemplo.nome);
+        }
+
+        // ================= FUNÇÕES AUXILIARES =================
+        function atualizarStatus(texto) {
+            document.getElementById('status').textContent = texto;
+        }
+
+        function mostrarResultado(emocaoData, musicaNome, artista) {
+            // Atualizar card da emoção
+            document.getElementById('emocaoNome').textContent = emocaoData.nome;
+            document.getElementById('emocaoDesc').textContent = emocaoData.desc;
+            document.getElementById('emocaoNivel').textContent = `Nível: ${emocaoData.nivel}`;
+            document.getElementById('emocaoCard').style.borderColor = emocaoData.cor;
+            
+            // Atualizar indicador na escala
+            const percent = ((emocaoData.nivel - 20) / (750 - 20)) * 100;
+            document.getElementById('indicador').style.left = `${percent}%`;
+            
+            // Gerar recomendação automática
+            let recomendacao = "";
+            if (emocaoData.nivel >= 500) {
+                recomendacao = `🎯 Esta música tem alta vibração! Ótima para atrair ${emocaoData.nome.toLowerCase()}.`;
+            } else if (emocaoData.nivel >= 200) {
+                recomendacao = `📈 Média vibração. Pode ser útil para ${emocaoData.desc.toLowerCase()}.`;
+            } else {
+                recomendacao = `⚠️ Baixa vibração. Considere se esta música está alinhada com seus objetivos.`;
+            }
+            
+            document.getElementById('recomendacaoTexto').textContent = recomendacao;
+        }
+
+        function criarOndaSonora() {
+            ondaElement = document.getElementById('ondaSonora');
+            ondaElement.innerHTML = '';
+            
+            for (let i = 0; i < 100; i++) {
+                const barra = document.createElement('div');
+                barra.className = 'barra-onda';
+                barra.style.left = `${i}%`;
+                barra.style.height = '10px';
+                ondaElement.appendChild(barra);
+            }
+        }
+
+        function iniciarLoopAnalise() {
+            intervaloAnalise = setInterval(() => {
+                if (!analisando || !analisador) return;
+                
+                // Simular detecção de emoção (em produção, analisaria os dados reais)
+                const emocaoIndex = Math.floor(Math.random() * ESCALA_HAWKINS.length);
+                const emocaoData = ESCALA_HAWKINS[emocaoIndex];
+                
+                mostrarResultado(emocaoData, "Áudio ao vivo", "Microfone");
+                
+                // Animar ondas sonoras
+                if (ondaElement) {
+                    const barras = ondaElement.querySelectorAll('.barra-onda');
+                    barras.forEach((barra, i) => {
+                        const altura = 10 + Math.random() * 80;
+                        barra.style.height = `${altura}px`;
+                        barra.style.transition = 'height 0.2s';
+                    });
+                }
+            }, 1000);
+        }
+
+        // ================= INICIALIZAÇÃO =================
+        window.onload = function() {
+            // Configurar eventos de toque para melhor experiência em celular
+            document.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('touchstart', function() {
+                    this.style.opacity = '0.8';
+                });
+                btn.addEventListener('touchend', function() {
+                    this.style.opacity = '1';
+                });
+            });
+            
+            // Mostrar exemplo inicial
+            setTimeout(() => {
+                carregarExemplo('amor');
+            }, 1000);
+        };
+    </script>
+</body>
+</html>
